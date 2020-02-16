@@ -1,4 +1,5 @@
-﻿using System;
+﻿using pewSpriteStudio.Exporters;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -39,8 +40,8 @@ namespace pewSpriteStudio
             {
                 AddExtension = true,
                 CheckFileExists = true,
-                DefaultExt = ".gbss",
-                Filter = "pewSpriteStudio File (*.gbss)|*.gbss",
+                DefaultExt = ".pss",
+                Filter = "pewSpriteStudio File (*.pss)|*.pss",
                 Multiselect = false,
                 ValidateNames = true,
                 Title = "Open File..."
@@ -68,8 +69,8 @@ namespace pewSpriteStudio
                     CheckPathExists = true,
                     AddExtension = true,
                     OverwritePrompt = true,
-                    DefaultExt = ".gbss",
-                    Filter = "pewSpriteStudio File (*.gbss)|*.gbss",
+                    DefaultExt = ".pss",
+                    Filter = "pewSpriteStudio File (*.pss)|*.pss",
                     ValidateNames = true,
                     Title = "Save File..."
                 };
@@ -99,8 +100,8 @@ namespace pewSpriteStudio
                 CheckPathExists = true,
                 AddExtension = true,
                 OverwritePrompt = true,
-                DefaultExt = ".gbss",
-                Filter = "pewSpriteStudio File (*.gbss)|*.gbss",
+                DefaultExt = ".pss",
+                Filter = "pewSpriteStudio File (*.pss)|*.pss",
                 ValidateNames = true,
                 Title = "Save File..."
             };
@@ -113,26 +114,6 @@ namespace pewSpriteStudio
                 this.Text = Globals.CurrentFilename + " - pewSpriteStudio";
                 Globals.FileLoaded = true;
                 Globals.FileChanged = false;
-            }
-        }
-
-        private void btnExport_ButtonClick(object sender, EventArgs e)
-        {
-            var dialog = new SaveFileDialog()
-            {
-                FileName = System.IO.Path.GetFileNameWithoutExtension(Globals.CurrentFilename) + ".h",
-                CheckPathExists = true,
-                AddExtension = true,
-                OverwritePrompt = true,
-                DefaultExt = ".h",
-                Filter = "C-header (*.h)|*.h",
-                ValidateNames = true,
-                Title = "Export Header..."
-            };
-
-            if (dialog.ShowDialog() == DialogResult.OK)
-            {
-                FileTransfer.SaveCHeader(dialog.FileName, true, true);
             }
         }
 
@@ -158,6 +139,39 @@ namespace pewSpriteStudio
             }
 
             this.Close();
+        }
+
+        private void btnExport_DropDownOpening(object sender, EventArgs e)
+        {
+            for (int i = btnExport.DropDownItems.Count - 1; i >= 0; i--)
+            {
+                btnExport.DropDownItems[i].Dispose();
+            }
+
+            btnExport.DropDownItems.Clear();
+
+            foreach (var exporter in ExportManager.loadedExporters.Values.OrderBy(x => x.GetName()))
+            {
+                var name = exporter.GetName();
+                var item = btnExport.DropDownItems.Add(name);
+                item.Tag = name;
+                item.Click += Exporter_Click;
+                item.Enabled = false;
+
+                if (Globals.CurrentFile != null)
+                {
+                    if (exporter.CanExport(Globals.CurrentFile))
+                    {
+                        item.Enabled = true;
+                    }
+                }
+            }
+        }
+
+        private void Exporter_Click(object sender, EventArgs e)
+        {
+            var name = (sender as ToolStripItem).Tag as string;
+            ExportManager.loadedExporters[name].Export(Globals.CurrentFile);
         }
     }
 }

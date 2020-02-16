@@ -1,4 +1,6 @@
-﻿using System;
+﻿using pewSpriteStudio.Exporters;
+using pewSpriteStudio.FileFormat;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -11,6 +13,10 @@ namespace pewSpriteStudio
 {
     public static class Globals
     {
+        public static string ApplicationName = "pewSpriteStudio";
+
+        public static PSSFile CurrentFile;
+
         public static MainForm MainWindow;
         public static TileEditor TileEditor;
         public static TileList TileList;
@@ -56,6 +62,8 @@ namespace pewSpriteStudio
 
         public static void Startup()
         {
+            ExportManager.Load();
+
             TileList = new TileList();
             TileEditor = new TileEditor();
             MapList = new MapList();
@@ -71,7 +79,7 @@ namespace pewSpriteStudio
                 {
                     FileTransfer.LoadFile(args[1], true, true);
                     Globals.CurrentFilename = args[1];
-                    Globals.MainWindow.Text = Path.GetFileName(args[1]) + " - pewSpriteStudio";
+                    Globals.MainWindow.Text = $"{Path.GetFileName(args[1])} - {ApplicationName}";
                     Globals.FileLoaded = true;
                     Globals.FileChanged = false;
                 }
@@ -86,7 +94,7 @@ namespace pewSpriteStudio
 
         public static void LoadLayout()
         {
-            var layoutPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SpriteStudio.xml");
+            var layoutPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "pewSpriteStudio.xml");
             if (File.Exists(layoutPath))
             {
                 MainWindow.dockPanel1.LoadFromXml(layoutPath, new DeserializeDockContent((dataString) =>
@@ -128,7 +136,7 @@ namespace pewSpriteStudio
 
         public static void SaveLayout()
         {
-            var layoutPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SpriteStudio.xml");
+            var layoutPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "pewSpriteStudio.xml");
             MainWindow.dockPanel1.SaveAsXml(layoutPath, Encoding.UTF8);
         }
 
@@ -157,10 +165,11 @@ namespace pewSpriteStudio
         public static void NewFile()
         {
             CloseFile();
+            Globals.CurrentFile = new PSSFile() { Filename = "Unnamed.pss", Platform = PSSFile.TargetPlatform.Gameboy, Version = 1 };
             FileLoaded = false;
             FileChanged = true;
             Tile.Add();
-            CurrentFilename = "Unnamed.gbss";
+            CurrentFilename = "Unnamed.pss";
         }
 
        

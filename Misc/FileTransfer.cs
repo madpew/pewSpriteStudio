@@ -1,10 +1,10 @@
-﻿using pewSpriteStudio.FileFormat;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using static pewSpriteStudio.Globals.Events;
+using pewSpriteStudio.FileFormat;
 
 namespace pewSpriteStudio
 {
@@ -16,42 +16,40 @@ namespace pewSpriteStudio
 
         public static void SaveFile(string filename, bool exportTiles = true, bool exportMaps = true)
         {
-            using (var fileStream = new FileStream(filename, FileMode.Create))
-            using (var binary = new BinaryWriter(fileStream))
-            {
-                new InfoLump() { Version = fileFormatVersion }.Write(binary, fileFormatVersion);
-                new TileLump().Write(binary, fileFormatVersion);
-                new MapLump().Write(binary, fileFormatVersion);
-                
-                binary.Flush();
-                binary.Close();
-                fileStream.Close();
-            }
+            var exportFile = new PSSFile();
+            // hardcode for now
+            exportFile.Platform = PSSFile.TargetPlatform.Gameboy;
+            exportFile.Tiles = Tile.Tiles.Values.ToList();
+            exportFile.Maps = TileMap.TileMaps.Values.ToList();
+            exportFile.Save(filename);
+            exportFile.FullPath = filename;
+            exportFile.Filename = Path.GetFileName(filename);
+            Globals.CurrentFile = exportFile;
         }
 
         public static bool LoadFile(string filename, bool loadTiles = true, bool loadMaps = true)
         {
-            using (var fileStream = File.OpenRead(filename))
-            using (var binary = new BinaryReader(fileStream))
+            var loadedFile = PSSFile.Load(filename);
+            loadedFile.FullPath = filename;
+            loadedFile.Filename = Path.GetFileName(filename);
+            Globals.CurrentFile = loadedFile;
+
+            if (loadTiles)
             {
-                var infoLump = FileLump.Read<InfoLump>(binary, fileFormatVersion);
-                var tileLump = FileLump.Read<TileLump>(binary, fileFormatVersion);
-                var mapLump = FileLump.Read<MapLump>(binary, fileFormatVersion);
-
-                foreach (var t in tileLump.Tiles)
+                foreach (var tile in loadedFile.Tiles)
                 {
-                    Tile.Tiles.Add(t.Id, t);
+                    Tile.Tiles.Add(tile.Id, tile);
                 }
-
-                foreach (var m in mapLump.Maps)
-                {
-                    TileMap.Add(m);
-                }
-
-                binary.Close();
-                fileStream.Close();
             }
 
+            if (loadMaps)
+            {
+                foreach (var map in loadedFile.Maps)
+                {
+                    TileMap.TileMaps.Add(map.Index, map);
+                }
+            }
+                
             if (loadTiles)
             {
                 Globals.Events.OnTilesChanged(new ChangeEventArgs() { ChangeType = ChangeEventArgs.EventType.Added });
@@ -61,6 +59,7 @@ namespace pewSpriteStudio
             {
                 Globals.Events.OnMapsChanged(new ChangeEventArgs() { ChangeType = ChangeEventArgs.EventType.Added, MapIndex = -1 });
             }
+
             return true;
         }
 
@@ -92,7 +91,7 @@ namespace pewSpriteStudio
                         {
                             bytestring += "0x" + b.ToString("X2") + ", ";
                         }
-                        
+
                         header.WriteLine($"{bytestring} // {tile.Index}");
                     }
 
@@ -114,7 +113,7 @@ namespace pewSpriteStudio
                 if (exportMaps)
                 {
                     header.WriteLine($"// {TileMap.TileMaps.Count} MAPS");
-                    
+
                     foreach (var map in TileMap.TileMaps.Values.OrderBy(m => m.Index))
                     {
                         header.WriteLine();
@@ -154,49 +153,49 @@ namespace pewSpriteStudio
                             }
 
 
-/*                            var tempBuffer = new List<byte>();
+                            /*                            var tempBuffer = new List<byte>();
 
-                            for (var y = 0; y < map.Height; y++)
-                            {
-                                for (var x = 0; x < map.Width; x++)
-                                {
-                                    tempBuffer.Add(map.Blocks[x + y * map.Width]);
-                                }
-                            }
+                                                        for (var y = 0; y < map.Height; y++)
+                                                        {
+                                                            for (var x = 0; x < map.Width; x++)
+                                                            {
+                                                                tempBuffer.Add(map.Blocks[x + y * map.Width]);
+                                                            }
+                                                        }
 
 
-                            var packedBuffer = new List<byte>();
+                                                        var packedBuffer = new List<byte>();
 
-                            byte mask = 128;
-                            byte current = 0;
-                            bool more = false;
+                                                        byte mask = 128;
+                                                        byte current = 0;
+                                                        bool more = false;
 
-                            for (var i = 0; i < tempBuffer.Count; i++)
-                            {
-                                // set current bit
-                                if (tempBuffer[i] > 0)
-                                {
-                                    current |= (byte)(mask >> (i & 0x07));
-                                    more = true;
-                                }
+                                                        for (var i = 0; i < tempBuffer.Count; i++)
+                                                        {
+                                                            // set current bit
+                                                            if (tempBuffer[i] > 0)
+                                                            {
+                                                                current |= (byte)(mask >> (i & 0x07));
+                                                                more = true;
+                                                            }
 
-                                if ((i & 0x07) == 0x07)
-                                {
-                                    packedBuffer.Add(current);
-                                    current = 0;
-                                    more = false;
-                                }
-                            }
+                                                            if ((i & 0x07) == 0x07)
+                                                            {
+                                                                packedBuffer.Add(current);
+                                                                current = 0;
+                                                                more = false;
+                                                            }
+                                                        }
 
-                            if (more)
-                            {
-                                packedBuffer.Add(current);
-                            }
+                                                        if (more)
+                                                        {
+                                                            packedBuffer.Add(current);
+                                                        }
 
-                            foreach (var b in packedBuffer)
-                            {
-                                header.Write("0x" + b.ToString("X2") + ", ");
-                            }*/
+                                                        foreach (var b in packedBuffer)
+                                                        {
+                                                            header.Write("0x" + b.ToString("X2") + ", ");
+                                                        }*/
 
                             header.WriteLine();
 
